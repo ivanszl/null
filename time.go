@@ -3,9 +3,15 @@ package null
 import (
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"time"
+)
+
+// These are predefined layouts for use in Time.Format and time.Parse.
+var (
+	MarshalFormat = time.RFC3339Nano
 )
 
 // Time is a nullable time.Time. It supports SQL and JSON serialization.
@@ -74,7 +80,17 @@ func (t Time) MarshalJSON() ([]byte, error) {
 	if !t.Valid {
 		return []byte("null"), nil
 	}
-	return t.Time.MarshalJSON()
+	if y := t.Time.Year(); y < 0 || y >= 10000 {
+		// RFC 3339 is clear that years are 4 digits exactly.
+		// See golang.org/issue/4556#c15 for more discussion.
+		return nil, errors.New("Time.MarshalJSON: year outside of range [0,9999]")
+	}
+
+	b := make([]byte, 0, len(MarshalFormat)+2)
+	b = append(b, '"')
+	b = t.Time.AppendFormat(b, MarshalFormat)
+	b = append(b, '"')
+	return b, nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -108,13 +124,22 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	return err
 }
 
+// MarshalText implements the encoding.TextMarshaler interface.
+// The time is formatted in define format, with sub-second precision added if present.
 func (t Time) MarshalText() ([]byte, error) {
 	if !t.Valid {
 		return []byte("null"), nil
 	}
-	return t.Time.MarshalText()
+	if y := t.Time.Year(); y < 0 || y >= 10000 {
+		return nil, errors.New("Time.MarshalText: year outside of range [0,9999]")
+	}
+
+	b := make([]byte, 0, len(MarshalFormat))
+	return t.Time.AppendFormat(b, MarshalFormat), nil
 }
 
+// UnmarshalText implements the encoding.TextUnmarshaler interface.
+// The time is expected to be in RFC 3339 format.
 func (t *Time) UnmarshalText(text []byte) error {
 	str := string(text)
 	if str == "" || str == "null" {
