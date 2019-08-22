@@ -113,7 +113,7 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 			}
 		}
 		
-	case map[string]interface{}
+	case map[string]interface{}:
 		ti, tiOK := x["Time"].(string)
 		valid, validOK := x["Valid"].(bool)
 		if !tiOK || !validOK {
@@ -159,7 +159,7 @@ func (t *Time) UnmarshalText(text []byte) error {
 			return err
 		}
 	} else {
-		var err
+		var err error
 		if t.Time, err = time.Parse(MarshalFormat, str); err != nil {
 			return err
 		}
