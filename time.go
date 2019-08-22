@@ -104,8 +104,16 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 	}
 	switch x := v.(type) {
 	case string:
-		err = t.Time.UnmarshalJSON(data)
-	case map[string]interface{}:
+		
+		if MarshalFormat == time.RFC3339Nano {
+			err = t.Time.UnmarshalJSON(data)
+		} else {
+			if string(data) != "null" {
+				t.Time, err = time.Parse(`"`+MarshalFormat+`"`, string(data))
+			}
+		}
+		
+	case map[string]interface{}
 		ti, tiOK := x["Time"].(string)
 		valid, validOK := x["Valid"].(bool)
 		if !tiOK || !validOK {
@@ -145,6 +153,16 @@ func (t *Time) UnmarshalText(text []byte) error {
 	if str == "" || str == "null" {
 		t.Valid = false
 		return nil
+	}
+	if MarshalFormat == time.RFC3339Nano {
+		if err := t.Time.UnmarshalText(text); err != nil {
+			return err
+		}
+	} else {
+		var err
+		if t.Time, err = time.Parse(MarshalFormat, str); err != nil {
+			return err
+		}
 	}
 	if err := t.Time.UnmarshalText(text); err != nil {
 		return err
