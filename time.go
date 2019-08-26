@@ -12,6 +12,7 @@ import (
 // These are predefined layouts for use in Time.Format and time.Parse.
 var (
 	MarshalFormat = time.RFC3339Nano
+	DefaultLocation = time.UTC
 )
 
 // Time is a nullable time.Time. It supports SQL and JSON serialization.
@@ -109,7 +110,7 @@ func (t *Time) UnmarshalJSON(data []byte) error {
 			err = t.Time.UnmarshalJSON(data)
 		} else {
 			if string(data) != "null" {
-				t.Time, err = time.Parse(`"`+MarshalFormat+`"`, string(data))
+				t.Time, err = time.ParseInLocation(`"`+MarshalFormat+`"`, string(data), DefaultLocation)
 			}
 		}
 		
@@ -160,7 +161,7 @@ func (t *Time) UnmarshalText(text []byte) error {
 		}
 	} else {
 		var err error
-		if t.Time, err = time.Parse(MarshalFormat, str); err != nil {
+		if t.Time, err = time.ParseInLocation(MarshalFormat, str, DefaultLocation); err != nil {
 			return err
 		}
 	}
